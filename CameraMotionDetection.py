@@ -5,22 +5,23 @@ import datetime
 from threading import Thread
 
 """
-MotionDetection Class, allows to detect camera motions:
-    path: where you want to save your files
-    video_source: numeric value of camera chosen (begining with 0)
-    video_size: string of the resolution of video (ie '1080p')
-    threshold: 0 very sensible ; 100000 not sensible at all
-    time_interval: time between records in second
-    recording_time: duration of the video recorded in second
-    show_camera: boolean to show the camera capture
-    show_mask: boolean to show the movement mask
-    debug: boolean to show if you want to print the values of the noise
+Documentation sur OpenCV : https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_tutorials.html
+MotionDetection Class, permet de détecter des mouvements via une camera :
+    path: là ou vous voulez enregistrer vos fichiers
+    video_source: valeur numérique d'identiication de la camera (commence avec un 0)
+    video_size: chaîne de caractères définissant la résolution (ie '1080p')
+    threshold: seuil -> 0 très sensible ; 100000 insensible
+    time_interval: intervalles d'enregistrement
+    recording_time: temps d'enregistrement de la vidéo
+    show_camera: booléen indicant la capture
+    show_mask: booléen indiquant un mouvement
+    debug: booléen pour l'indication du niveau de bruit
 """
 class MotionDetection(object):
     is_recording = False
     time_counter = 0
 
-    # Standard Video Dimensions Sizes
+    # Dimensions standard des Video
     STD_DIMENSIONS = {
         "480p": (640, 480),
         "720p": (1280, 720),
@@ -29,24 +30,24 @@ class MotionDetection(object):
     }
 
     def __init__(self, path, video_source, video_size, threshold, time_interval, recording_time, show_camera, show_mask, debug):
-        self.video_source = video_source                # Source of the video
-        self.video_size = video_size                    # Size of video
-        self.get_dimensions(video_size)                 # Width and Height of camera
-        self.threshold = threshold                      # Max noise threshold
-        self.time_interval = time_interval              # Time interval between records in seconds
-        self.recording_time = recording_time            # Duration of the video recorded if motion detected
-        self.path = path                                # Recorded file saving path
+        self.video_source = video_source                # Source de la video
+        self.video_size = video_size                    # taille video
+        self.get_dimensions(video_size)                 # largeur et hauteur de l'image
+        self.threshold = threshold                      # Niveau de bruit maximum
+        self.time_interval = time_interval              # Intervalle entre enregistrements in seconds
+        self.recording_time = recording_time            # Durée d'enregistrement en cas de détection de mouvement
+        self.path = path                                # lieu de suavegarde de la video
         self.show_camera = show_camera
         self.show_mask = show_mask
         self.debug = debug
 
-        # Initializing components
+        # Initialisations
         self.cap = cv2.VideoCapture(video_source)
         self.sub = cv2.createBackgroundSubtractorMOG2()
         self.cap.set(3, self.width)
         self.cap.set(4, self.height)
 
-        # Preparing the windows
+        # Initialisation de la fenêtre
         if self.show_camera:
             cv2.namedWindow('Motion Detection', cv2.WINDOW_NORMAL)
             cv2.resizeWindow('Motion Detection', 640, 420)
@@ -65,18 +66,18 @@ class MotionDetection(object):
         print("Camera detected! Size: " + str(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)) + 'x' + str(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
         print("Motion Detection activated. Waiting for motion...")
         while (True):
-            # Reading the frame
+            # Lecture
             ret, frame = self.cap.read()
             if self.show_camera:
                 cv2.imshow("Motion Detection", frame)
 
-            # Creating the mask
+            # Création d'un masque
             blur = cv2.GaussianBlur(frame, (19, 19), 0)
             mask = self.sub.apply(blur)
             if self.show_mask:
                 cv2.imshow("Motion Mask",mask)
 
-            # Creating numpy histogram to analyse the noise of the pixels
+            # Création de l'histogramme de numpy pour annalyse du bruit
             img_temp = np.ones(frame.shape, dtype="uint8") * 255
             img_temp_and = cv2.bitwise_and(img_temp, img_temp, mask=mask)
             img_temp_and_bgr = cv2.cvtColor(img_temp_and, cv2.COLOR_BGR2GRAY)
@@ -84,8 +85,8 @@ class MotionDetection(object):
             if self.debug:
                 print("Threshold =", self.threshold, ", Noise = ", hist[255], )
 
-            # Testing if the histogram is greater than the threshold configured
-            # Launching the recording thread
+            # Comparaison de l'histogramme et du niveau de bruit
+            # Lancement de l'enregistrement
             if hist[255] > self.threshold and not self.is_recording and time.time() - self.time_counter > self.time_interval:
                 print("Motion detected! Recording video...")
                 self.is_recording = True
@@ -94,7 +95,7 @@ class MotionDetection(object):
             if cv2.waitKey(100) == 13:
                 break
 
-    # Recording thread
+    # Enregistrement
     def record_video(self):
         date = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         fourcc = cv2.VideoWriter_fourcc(*'H264')
